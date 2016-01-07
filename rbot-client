@@ -1,0 +1,789 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+############################################################
+#Released under the GNU General Public License v3.0        #    
+############################################################
+
+#import required python libraries
+from os import system
+import subprocess
+from time import sleep
+import curses, traceback, curses.textpad as textpad
+import sys;
+reload(sys);
+sys.setdefaultencoding("utf8")
+import locale
+locale.setlocale(locale.LC_ALL,"")
+from urllib import urlopen
+
+####################################################
+
+#start of main loop
+
+def main(stdscr):
+	
+	homescreen = stdscr.subwin(24, 80, 0, 0)
+
+	#draw border around homescreen
+	homescreen.border(0)
+	#draw renderbot logo
+	homescreen.addstr(1,9, " _____  ______ _   _ _____  ______ _____  ____   ____ _______ ")
+	homescreen.addstr(2,9, "|  __ \|  ____| \ | |  __ \|  ____|  __ \|  _ \ / __ \__   __|")
+	homescreen.addstr(3,9, "| |__) | |__  |  \| | |  | | |__  | |__) | |_) | |  | | | |   ")
+	homescreen.addstr(4,9, "|  _  /|  __| | . ` | |  | |  __| |  _  /|  _ <| |  | | | |   ")
+	homescreen.addstr(5,9, "| | \ \| |____| |\  | |__| | |____| | \ \| |_) | |__| | | |   ")
+	homescreen.addstr(6,9, "|_|  \_\______|_| \_|_____/|______|_|  \_\____/ \____/  |_|   ")
+
+	homescreen.addstr(10,32, "1 - Setup")
+	homescreen.addstr(12,32, "2 - Check Prices")
+	homescreen.addstr(14,32, "3 - Manage Queue")
+	homescreen.addstr(16,32, "4 - Start Instances")
+	homescreen.addstr(18,32, "5 - Exit")
+
+	#display the homescreen
+	homescreen.refresh()
+
+	homeinput = 0
+	
+#Initial	
+	while homeinput != ord('5'):
+		homescreen.refresh()
+		homeinput = homescreen.getch()
+
+
+		if homeinput == ord('1'):
+			setup = curses.newwin(24,80,0,0)		
+			setupinput = 0
+			while setupinput != ord('3'):
+
+				def drawtextbox(boxY1, boxX1, label, linenumber, approxlength):
+					setup.addstr(boxY1, boxX1+1, label)
+					labellength = len(label)
+					setup.addstr(boxY1, boxX1+2+labellength, subprocess.check_output("sed -n %dp ~/.brenda.conf | cut -f2- -d'='" % linenumber, shell=True))
+					setup.refresh
+                                def redactedtextbox(boxY1, boxX1, label, linenumber, approxlength):
+                                        setup.addstr(boxY1, boxX1+1, label)
+                                        labellength = len(label)
+                                        setup.addstr(boxY1, boxX1+2+labellength, "*" * len(subprocess.check_output("sed -n %dp ~/.brenda.conf | cut -f2- -d'='" % linenumber, shell=True)))
+                                        #curses.textpad.rectangle(setup, boxY1, boxX1, boxY1+2, boxX1+3+labellength+approxlength)
+                                        setup.refresh
+				def gettext(boxY1, boxX1, label, linenumber, approxlength):
+					labellength = len(label)
+					typingbox = setup.subwin(1,approxlength+1, boxY1, boxX1+labellength+2)
+					curses.curs_set(1)
+					textpad.Textbox(typingbox).edit()
+					returnvalue = str(textpad.Textbox(typingbox).gather())
+					curses.curs_set(0)
+					subprocess.check_output("sed -i \'%ds@\=.*@\=%s@\' ~/.brenda.conf" % (linenumber, returnvalue), shell=True)
+				def getregion(boxY1, boxX1, label, linenumber, approxlength):
+					labellength = len(label)
+					typingbox = setup.subwin(1,approxlength+1, boxY1, boxX1+labellength+2)
+					curses.curs_set(1)
+					returnvalue = str(textpad.Textbox(typingbox).gather())
+					curses.curs_set(0)
+					subprocess.check_output("sed -i \'%ds@\=.*@\=%s@\' ~/.brenda.conf" % (linenumber, returnvalue), shell=True)
+				def clearline(line):
+                                	setup.addstr(line,3, "                                                                           ")
+	
+				
+				setup.keypad(1)
+				setup.addstr(1,37, "Setup")
+				setup.addstr(20,32, "1 - Edit")
+				setup.addstr(21,32, "2 - Push settings")
+				setup.addstr(22,32, "3 - Home")
+				redactedtextbox(4,5,"AWS Access Key:",8,20)
+				redactedtextbox(6,5,"AWS Secret Key:",9,40)
+				drawtextbox(8,5,"Blender Project:", 2, 50)
+				drawtextbox(10,5,"Output location:", 4, 50)
+				drawtextbox(12,5,"SQS work queue:", 3, 50)
+				drawtextbox(14,5,"Default instance type:", 1, 15)
+				drawtextbox(16,5,"When finished:", 6, 8)
+				drawtextbox(18,5,"AWS region:", 10, 16)
+				textpad.rectangle(setup,3,4,19,75)
+				setup.border(0)
+				setup.refresh()
+				setupinput = setup.getch()
+				if setupinput == ord('1'):
+	                                drawtextbox(4,5,"AWS Access Key:",8,20)
+	                                drawtextbox(6,5,"AWS Secret Key:",9,40)
+        	                        textpad.rectangle(setup,3,4,19,75)
+                	                setup.border(0)
+                        	        setup.refresh()
+                                	gettext(4,5,"AWS Access Key:",8,20)
+	                                gettext(6,5,"AWS Secret Key:",9,40)
+        	                        gettext(8,5,"Blender Project:", 2, 50)
+                	                gettext(10,5,"Output location:", 4, 50)
+                        	        gettext(12,5,"SQS work queue:", 3, 50)
+                                	gettext(14,5,"Default instance type:", 1, 15)
+	                                gettext(16,5,"When finished:", 6, 8)
+        	                        gettext(18,5,"AWS region:", 10, 16)
+                	                getregion(18,5,"AWS region:", 11, 16)
+                        	        getregion(18,5,"AWS region:", 12, 16)
+                                	subprocess.check_output("brenda-run init", shell=True)
+
+
+
+				elif setupinput == ord('2'):
+					clearline(21)
+					setup.addstr(21,15, "Stop all current processes and push new settings? (1-yes, 2-no)")
+					setup.refresh()
+					pushinput = setup.getch()
+					if pushinput == ord('1'):
+						clearline(21)
+						setup.addstr(21,15, "Pushing new settings to instances...")
+						setup.refresh()
+						try:
+                                               		try:
+                                                       		subprocess.check_output("brenda-tool ssh sudo killall brenda-node", shell=True)
+                                                       		subprocess.check_output("sudo rm -rf ~/newrendersettings", shell=True)
+                                               		except:   
+                                                       		pass
+                                               		subprocess.check_output("sudo brenda-run script > ~/newrendersettings", shell=True)
+                                               		subprocess.check_output("sed -i '1i sudo -i' ~/newrendersettings", shell=True)
+                                               
+                                               		subprocess.check_output("brenda-tool ssh 'bash -s' < ~/newrendersettings", shell=True)
+                                               		clearline(21)
+                                               		setup.addstr(21,15,'Settings pushed.')
+                                               		setup.refresh()
+							sleep(0.5)
+							clearline(21)
+							continue
+						except:
+							clearline(21)
+							setup.addstr(21,15,'Push failed.')
+							setup.refresh()
+							sleep(0.5)
+							clearline(21)
+							continue
+					
+                                        else:
+                                               	clearline(21)
+                                               	setup.addstr(21,15, 'Settings push cancelled.')
+                                               	setup.refresh()
+                                               	sleep(0.5)
+						clearline(21)
+						continue
+
+								
+				elif setupinput == ord('3'):
+					break
+
+								
+						
+			homescreen.refresh()
+
+
+		if homeinput == ord('2'):
+			prices = curses.newwin(24,80,0,0)		
+			pricesinput = 0
+			while pricesinput != ord('3'):
+				
+				prices.border(0)
+				prices.addstr(2,32, "Check Prices")
+				prices.addstr(14,32, "1 - Input instance type")
+				prices.addstr(16,32, "2 - Refresh")
+				prices.addstr(18,32, "3 - Home")
+				inputbox = prices.subwin(3,30,4,2)
+				inputbox.border(0)
+				prices.addstr(5,3, "Instance Type:")
+				typingbox = prices.subwin(1,13,5,18)
+				
+				outputbox = prices.subwin(8,45,4,33)
+				outputbox.border(0)
+				prices.refresh()
+				
+				
+				for y in range(5, 11):
+		   				prices.addstr(y, 34, "                                           ")
+				
+				instance = str(textpad.Textbox(typingbox).gather())
+				output = subprocess.check_output(["brenda-run", "-i", instance, "price"])
+				for y, line in enumerate(output.splitlines(), 5):
+		   				prices.addstr(y, 34, line)
+				prices.border(0)
+				prices.refresh()
+				pricesinput = prices.getch()
+				if pricesinput == ord('1'):
+				
+					curses.curs_set(1)
+					textpad.Textbox(typingbox).edit()
+					
+					curses.curs_set(0)
+					continue
+				if pricesinput == ord('2'):
+					continue
+			homescreen.refresh()
+
+		if homeinput == ord('3'):
+			queue = curses.newwin(24,80,0,0)		
+			queueinput = 0
+			while queueinput != ord('5'):
+				def drawtextbox(boxY1, boxX1, label, approxlength):
+					queue.addstr(boxY1, boxX1+1, label)
+					labellength = len(label)
+					#curses.textpad.rectangle(setup, boxY1, boxX1, boxY1+2, boxX1+3+labellength+approxlength)				
+				def gettext(boxY1, boxX1, label, approxlength):
+					labellength = len(label)
+					typingbox = queue.subwin(1,approxlength+1, boxY1, boxX1+labellength+2)
+					curses.curs_set(1)
+					textpad.Textbox(typingbox).edit()
+					returnvalue = str(textpad.Textbox(typingbox).gather())
+					curses.curs_set(0)
+					return returnvalue
+					
+
+				
+				queue.addstr(2,32, "Manage Queue")
+				
+				queue.addstr(14,32, "1 - Add frame tasks")
+				queue.addstr(16,32, "2 - Add subframe tasks")
+				queue.addstr(18,32, "3 - Refresh")
+				queue.addstr(20,32, "4 - Reset tasks")
+				queue.addstr(22,32, "5 - Home")
+				queue.border(0)
+				curses.textpad.rectangle(queue, 5, 3, 7, 25)
+				curses.textpad.rectangle(queue, 5, 30, 12, 75)
+				queue.refresh()
+				queue.addstr(6, 4, subprocess.check_output("brenda-work status", shell=True))
+				queue.border(0)
+				curses.textpad.rectangle(queue, 5, 3, 7, 25)
+				curses.textpad.rectangle(queue, 5, 30, 12, 75)
+				queue.refresh()
+				queueinput = queue.getch()
+				if queueinput == ord('1'):
+					queue.addstr(11, 31, '                                  ')
+					queue.addstr(9, 31, '                                  ')
+					queue.addstr(7, 31, '                                  ')
+					drawtextbox(7, 30, "Start:", 15)
+					drawtextbox(9, 30, "End:", 15)
+					queue.refresh()
+					start = int(gettext(7, 30, "Start:", 15))
+					end = int(gettext(9, 30, "End:", 15))
+					total = int(end)-int(start)+1
+					if total <= 0:
+						queue.addstr(11, 31, 'Invalid # of frames.')
+						continue
+					queue.addstr(11, 31, 'Add %d frames? (1 - yes, 2 - no)' % total)
+					frameanswer = queue.getch()
+					if frameanswer == ord('1'):
+						queue.addstr(11, 31, 'Please wait as frames are added... ')
+						queue.refresh()
+						subprocess.check_output("brenda-work -T ~/frame-template -s %d -e %d push" % (start, end), shell=True)
+						queue.addstr(11, 31, '                                           ')
+						queue.addstr(11, 31, '%d frames added to work queue.     ' % total)
+						queue.refresh()
+					if frameanswer != ord ('1'):
+						queue.addstr(11, 31, 'Add frames operation cancelled.    ')
+						queue.refresh()
+						continue
+					
+				elif queueinput == ord('2'):
+					queue.addstr(11, 31, '                                           ')
+					drawtextbox(7, 30, "Start:", 10)
+					drawtextbox(9, 30, "End:", 10)
+					drawtextbox(7, 50, "Horiz. tiles:", 10)
+					drawtextbox(9, 50, "Vert. tiles:", 10)
+					queue.refresh()
+					start = int(gettext(7, 30, "Start:", 10))
+					end = int(gettext(9, 30, "End:", 10))
+					vsub = int(gettext(7, 50, "Horiz. tiles:", 9))
+					hsub = int(gettext(9, 50, "Vert. tiles:", 10))
+					total = end - start + 1
+					totalsubframes = (end*hsub*vsub)-(start*hsub*vsub)+(1*hsub*vsub)
+					if total <= 0:
+						queue.addstr(11, 31, 'Invalid # of frames.')
+						continue
+					queue.addstr(11, 31, '                                           ')
+					queue.addstr(11, 31, 'Add %d subframes? (1 - yes, 2 - no)' % totalsubframes)
+					frameanswer = queue.getch()
+					if frameanswer == ord('1'):
+						queue.addstr(11, 31, '                                           ')
+						queue.addstr(11, 31, 'Please wait as subframes are added... ')
+						queue.refresh()
+						subprocess.check_output("brenda-work -T ~/subframe-template -s %d -e %d -X %d -Y %d push" % (start, end,hsub,vsub), shell=True)
+						queue.addstr(11, 31, '                                           ')
+						queue.addstr(11, 31, '%d subframes added to work queue     ' % totalsubframes)
+						queue.refresh()
+					if frameanswer != ord ('1'):
+						queue.addstr(11, 31, '                                           ')
+						queue.addstr(11, 31, 'Add subframes operation cancelled.    ')
+						queue.refresh()
+						continue
+				elif queueinput == ord('3'):
+					continue
+				elif queueinput == ord('4'):
+					queue.addstr(11, 31, '                                           ')
+					queue.addstr(11, 31, 'Delete all tasks? (1 - yes, 2 - no)')
+					queue.refresh()
+					frameanswer = queue.getch()
+					if frameanswer == ord('1'):
+						queue.addstr(11, 31, 'Please wait while tasks are deleted...    ')
+						queue.refresh()
+						subprocess.check_output("brenda-work reset", shell=True)
+						queue.addstr(11, 31, '                                           ')
+						queue.addstr(11, 31, 'All tasks deleted.    ')
+						queue.refresh()
+					if frameanswer != ord ('1'):
+						queue.addstr(11, 31, '                                           ')
+						queue.addstr(11, 31, 'Delete operation cancelled.    ')
+						queue.refresh()
+						continue
+			
+		homescreen.refresh()
+
+		
+		if homeinput == ord('4'):
+			instancesinput = 0
+			instances = curses.newwin(24,80,0,0)
+			instances.keypad(1)
+			instances.addstr(2,32, "Start Instances")
+			instances.addstr(14,5, "1 - Create spot requests")
+			instances.addstr(16,5, "2 - Launch on-demand instances")
+			instances.addstr(18,5, "3 - Cancel all spot requests")
+			instances.addstr(20,5, "4 - Stop all running instances")
+			instances.addstr(14,45, "5 - Prune running instances")
+                        #instances.addstr(14,45, "5 - Push new render settings")
+			instances.addstr(16,45, "6 - View running instances")
+			instances.addstr(18,45, "7 - View current spot requests")
+			instances.addstr(20,45, "8 - Home")
+			curses.textpad.rectangle(instances, 4, 10, 12, 70)
+			instances.border(0)
+			instances.refresh()
+			def drawtextbox(boxY1, boxX1, label, approxlength):
+				instances.addstr(boxY1, boxX1+1, label)
+				labellength = len(label)
+				#curses.textpad.rectangle(setup, boxY1, boxX1, boxY1+2, boxX1+3+labellength+approxlength)				
+			def gettext(boxY1, boxX1, label, approxlength):
+				labellength = len(label)
+				typingbox = instances.subwin(1,approxlength+1, boxY1, boxX1+labellength+2)
+				curses.curs_set(1)
+				textpad.Textbox(typingbox).edit()
+				returnvalue = str(textpad.Textbox(typingbox).gather())
+				curses.curs_set(0)
+				return returnvalue
+			def clearline(line):
+				instances.addstr(line,11, "                                                           ")
+			messages = instances.subwin(4,30,8,40)
+			   
+
+			while instancesinput != ord('8'):
+				
+				
+				if instancesinput == ord('1'):
+					
+					instancesinput = 0
+					clearline(6)
+					clearline(8)
+					clearline(10)
+					drawtextbox(6,12,"Instance type:", 15)
+					drawtextbox(8,12,"Number of instances:", 6)
+					drawtextbox(10,12,"Highest price ($):", 6)
+					drawtextbox(6,45,"Persistent? (y/n):", 1)
+					
+					instances.refresh()
+
+					instancetype = gettext(6,12,"Instance type:", 15)
+					
+					count = gettext(8,12,"Number of instances:", 6).replace("$", "")
+					price = gettext(10,12,"Highest price ($):", 6)
+					persistent = gettext(6,45,"Persistent? (y/n):", 1).replace("Y", "-P").replace("y","-P")
+					if persistent != "-P ":
+						persistent = ""
+					try:
+
+						overallprice = float(price) * int(count)
+						
+					except:
+						#break
+						
+						messages.clear()
+						messages.addstr(2,0, 'Invalid parameters! Try again.')		
+						instances.refresh()
+						continue
+					
+					messages.clear()
+					messages.addstr(0, 0, '   Request at $%s per hour?' % overallprice)
+					messages.addstr(2,0, '       (1 - yes, 2 - no) ')
+					instances.refresh()
+					
+					frameanswer = instances.getch()
+					if frameanswer == ord('1'):
+						amivariable = urlopen("http://renderbot.net/ami.html").read()
+						messages.clear()
+						messages.addstr(2,0, '      Making requests...')
+						messages.refresh()
+						subprocess.check_output("brenda-run %s -i %s -N %s -p %s -a %s spot" % (persistent, instancetype, count, price, amivariable), shell=True)
+						messages.clear()
+						messages.addstr(2,0,'      %s request(s) made.' % count)
+						messages.refresh()
+					else:
+						messages.clear()
+						messages.addstr(2,0, '      Requests cancelled.')
+						messages.refresh()
+						continue
+				if instancesinput == ord('2'):
+					instancesinput = 0
+					clearline(6)
+					clearline(8)
+					clearline(10)
+					instancesinput = 0
+					drawtextbox(6,12,"Instance type:", 15)
+					drawtextbox(8,12,"Number of instances:", 6)
+					
+					
+					instances.refresh()
+
+					instancetype = gettext(6,12,"Instance type:", 15)
+					count = gettext(8,12,"Number of instances:", 6).replace("$", "")
+					
+
+					messages.clear()
+					messages.addstr(0, 0, '      Launch %s instances?' % count)
+					messages.addstr(2,0, '       (1 - yes, 2 - no) ')
+					instances.refresh()
+					
+					frameanswer = instances.getch()
+					if frameanswer == ord('1'):
+						amivariable = urlopen("http://renderbot.net/ami.html").read()
+						messages.clear()
+						messages.addstr(2,0, '      Launching instances...')
+						messages.refresh()
+						subprocess.check_output("brenda-run -i %s -N %s -a %s demand" % (instancetype, count, amivariable), shell=True)
+						messages.clear()
+						messages.addstr(2,0,'      %s instance(s) launched.' % count)
+						messages.refresh()
+					else:
+						messages.clear()
+						messages.addstr(2,0, '      Launch cancelled')
+						messages.refresh()
+						continue
+				if instancesinput == ord('3'):
+					instancesinput = 0
+					clearline(6)
+					clearline(8)
+					clearline(10)
+					
+					messages.clear()
+					messages.addstr(0, 0, '    Cancel all spot requests?')
+					messages.addstr(2,0, '       (1 - yes, 2 - no) ')
+					frameanswer = instances.getch()
+					if frameanswer == ord('1'):
+						messages.clear()
+						messages.addstr(2,0, '      Cancelling requests...')
+						messages.refresh()
+						subprocess.check_output("brenda-run cancel", shell=True)
+						messages.clear()
+						messages.addstr(2,0,'      All requests cancelled.')
+						messages.refresh()
+					else:
+						
+						messages.clear()
+						messages.addstr(2,0, '      Cancellation cancelled')
+						messages.refresh()
+						continue
+						instances.refresh()
+				if instancesinput == ord('4'):
+					instancesinput = 0
+					clearline(6)
+					clearline(8)
+					clearline(10)
+					
+					messages.clear()
+					messages.addstr(0, 0, '    Stop all instances?')
+					messages.addstr(2,0, '       (1 - yes, 2 - no) ')
+					frameanswer = instances.getch()
+					if frameanswer == ord('1'):
+						messages.clear()
+						messages.addstr(2,0, '      Stopping instances...')
+						messages.refresh()
+						subprocess.check_output("brenda-run -T stop", shell=True)
+						messages.clear()
+						messages.addstr(2,0,'      All instances stopped.')
+						messages.refresh()
+					else:
+						
+						messages.clear()
+						messages.addstr(2,0, '      Termination cancelled')
+						messages.refresh()
+						continue
+						instances.refresh()
+
+				if instancesinput == ord('5'):
+                                        instancesinput = 0
+                                        clearline(6)
+                                        clearline(8)
+                                        clearline(10)
+
+                                        drawtextbox(6,12,"Target instance count:", 4)
+                                        drawtextbox(8,12,"Minutes used filter?:", 2)
+                                        instances.refresh()
+
+                                        instancecount = gettext(6,12,"Target instance count:", 4).replace(' ', '')
+                                        minutefilter = gettext(8,12,"Minutes used filter?:", 2).replace(' ', '')
+                                        if minutefilter:
+                                                minutefilter = "-t" + " " + str(minutefilter)
+                                        messages.clear()
+                                        messages.addstr(0, 0, '    Prune to %s instances?' % instancecount)
+                                        messages.addstr(2,0, '       (1 - yes, 2 - no) ')
+                                        frameanswer = instances.getch()
+                                        if frameanswer == ord('1'):
+                                                messages.clear()
+                                                messages.addstr(2,0, '    Pruning to %s instances...' % instancecount)
+                                                messages.refresh()
+                                                subprocess.check_output("brenda-tool -T %s prune %s" % (minutefilter, str(instancecount)), shell=True)
+                                                messages.clear()
+                                                messages.addstr(2,0,'      Instances pruned.')
+                                                messages.refresh()
+                                        else:
+
+                                                messages.clear()
+                                                messages.addstr(2,0, '      Pruning cancelled.')
+                                                messages.refresh()
+                                                continue
+                                                instances.refresh()
+
+
+				if instancesinput == ord('6'):
+					instancestatusinput = 0
+					instancestatus = curses.newwin(24,80,0,0)
+					instancestatus.keypad(1)
+					instancestatus.border(0)
+					instancestatus.addstr(2,26, "Running Instance Status Report")
+					instancestatus.addstr(18,32, "Scroll with arrows")
+					instancestatus.addstr(20, 32, "1 - Refresh")
+					instancestatus.addstr(22, 32, "2 - Back")
+					instancestatus.refresh()
+					runstatus_posUD = 0
+					runstatus_posLR = 0
+					runstatus = curses.newpad(100,100)
+					runstatus.addstr(0, 0, subprocess.check_output("brenda-run status | sed 's/\.000Z//g;s/T/ /g;s/<Status: //g;s/>//g;s/@/│/g;s/`/T/g;/Spot Requests.*/Q'", shell=True).encode('utf-8'))
+					toplabel = curses.newpad(2,100)
+					toplabel.addstr(0,0, "instance type  │uptime          │launch date/time (GMT)\n───────────────────────────────────────────────────────────────────────────────────────────────")
+					while instancestatusinput != ord('2'):
+
+						
+						ystart = 6
+						xstart = 2
+
+						yend = 16
+						xend = 77
+						runstatus.refresh(runstatus_posUD, runstatus_posLR, ystart, xstart, yend, xend)
+						toplabel.refresh(0, runstatus_posLR, ystart-2,xstart, ystart-1, xend)
+						instancestatus.refresh()
+						if instancestatusinput == curses.KEY_DOWN:
+							if runstatus_posUD < 100:
+								runstatus_posUD += 1
+								runstatus.refresh(runstatus_posUD, runstatus_posLR, ystart, xstart, yend, xend)
+						elif instancestatusinput == curses.KEY_UP:
+							if runstatus_posUD > 0:
+								runstatus_posUD -= 1
+								runstatus.refresh(runstatus_posUD, runstatus_posLR, ystart, xstart, yend, xend)
+						elif instancestatusinput == curses.KEY_RIGHT:
+							if runstatus_posLR > 0:
+								runstatus_posLR -= 1
+								runstatus.refresh(runstatus_posUD, runstatus_posLR, ystart, xstart, yend, xend)
+								toplabel.refresh(0, runstatus_posLR, ystart-2,xstart, ystart-1, xend)
+						elif instancestatusinput == curses.KEY_LEFT:
+							if runstatus_posLR < 100:
+								runstatus_posLR += 1
+								runstatus.refresh(runstatus_posUD, runstatus_posLR, ystart, xstart, yend, xend)
+								toplabel.refresh(0, runstatus_posLR, ystart-2,xstart, ystart-1, xend)			
+						if instancestatusinput == ord('1'):
+				
+							runstatus.clear()
+							runstatus.addstr(0, 0, subprocess.check_output("brenda-run status | sed 's/\.000Z//g;s/T/ /g;s/<Status: //g;s/>//g;s/@/│/g;s/`/T/g;/Spot Requests.*/Q'", shell=True).encode('utf-8'))
+							runstatus.refresh(runstatus_posUD, runstatus_posLR, ystart, xstart, yend, xend)
+						instancestatusinput = instancestatus.getch()
+					instances.touchwin()
+					instances.refresh()
+
+				if instancesinput == ord('7'):
+					instancestatusinput = 0
+					instancestatus = curses.newwin(24,80,0,0)
+					instancestatus.keypad(1)
+					instancestatus.border(0)
+					instancestatus.addstr(2,28, "Spot Request Status Report")
+					instancestatus.addstr(18,32, "Scroll with arrows")
+					instancestatus.addstr(20, 32, "1 - Refresh")
+					instancestatus.addstr(22, 32, "2 - Back")
+					instancestatus.refresh()
+					runstatus_posUD = 0
+					runstatus_posLR = 0
+					runstatus = curses.newpad(100,100)
+					runstatus.addstr(0, 0, subprocess.check_output("brenda-run status | sed 's/\.000Z//g;s/T/ /g;s/<Status: //g;s/>//g;s/@/│/g;s/`/T/g' | sed -n '/^Spot Requests$/,$p' | tail -n +2", shell=True).encode('utf-8'))
+					toplabel = curses.newpad(2,100)
+					toplabel.addstr(0,0, "status   │price  │type      │date/time (GMT)    │status code\n───────────────────────────────────────────────────────────────────────────────────────────")
+					while instancestatusinput != ord('2'):
+
+						
+						ystart = 6
+						xstart = 2
+
+						yend = 16
+						xend = 77
+						runstatus.refresh(runstatus_posUD, runstatus_posLR, ystart, xstart, yend, xend)
+						toplabel.refresh(0, runstatus_posLR, ystart-2,xstart, ystart-1, xend)
+						instancestatus.refresh()
+						if instancestatusinput == curses.KEY_DOWN:
+							if runstatus_posUD < 100:
+								runstatus_posUD += 1
+								runstatus.refresh(runstatus_posUD, runstatus_posLR, ystart, xstart, yend, xend)
+						elif instancestatusinput == curses.KEY_UP:
+							if runstatus_posUD > 0:
+								runstatus_posUD -= 1
+								runstatus.refresh(runstatus_posUD, runstatus_posLR, ystart, xstart, yend, xend)
+						elif instancestatusinput == curses.KEY_RIGHT:
+							if runstatus_posLR > 0:
+								runstatus_posLR -= 1
+								runstatus.refresh(runstatus_posUD, runstatus_posLR, ystart, xstart, yend, xend)
+								toplabel.refresh(0, runstatus_posLR, ystart-2,xstart, ystart-1, xend)
+						elif instancestatusinput == curses.KEY_LEFT:
+							if runstatus_posLR < 100:
+								runstatus_posLR += 1
+								runstatus.refresh(runstatus_posUD, runstatus_posLR, ystart, xstart, yend, xend)
+								toplabel.refresh(0, runstatus_posLR, ystart-2,xstart, ystart-1, xend)			
+						if instancestatusinput == ord('1'):
+				
+							runstatus.clear()
+							runstatus.addstr(0, 0, subprocess.check_output("brenda-run status | sed 's/\.000Z//g;s/T/ /g;s/<Status: //g;s/>//g;s/@/│/g;s/`/T/g' | sed -n '/^Spot Requests$/,$p' | tail -n +2", shell=True).encode('utf-8'))
+							runstatus.refresh(runstatus_posUD, runstatus_posLR, ystart, xstart, yend, xend)
+						instancestatusinput = instancestatus.getch()
+					instances.touchwin()
+					instances.refresh()
+
+				instancesinput = instances.getch()
+
+
+
+		homescreen.refresh()
+
+
+		"""if homeinput == ord('4'):
+		instances = curses.newwin(24,80,0,0)		
+		instancesinput = 42
+		instances.keypad(1)
+		#while instancesinput != curses.KEY_DOWN:
+		runstatus_posUD = 0
+		runstatus_posLR = 0
+		runstatus = curses.newpad(100,100)
+			
+		runstatus.addstr(0, 0, subprocess.check_output("brenda-run status | sed 's/\.000Z//g;s/T/ /g;s/<Status: //g;s/>//g;s/@/│/g;s/`/T/g;/Spot Requests.*/Q'", shell=True).encode('utf-8'))
+		while instancesinput != ord('8'):
+
+			def drawtextbox(boxY1, boxX1, label, approxlength):
+				instances.addstr(boxY1, boxX1+1, label)
+				labellength = len(label)
+				#curses.textpad.rectangle(setup, boxY1, boxX1, boxY1+2, boxX1+3+labellength+approxlength)				
+			def gettext(boxY1, boxX1, label, approxlength):
+				labellength = len(label)
+				typingbox = instances.subwin(1,approxlength+1, boxY1, boxX1+labellength+2)
+				curses.curs_set(1)
+				textpad.Textbox(typingbox).edit()
+				returnvalue = str(textpad.Textbox(typingbox).gather())
+				curses.curs_set(0)
+				return returnvalue
+			
+			instances.addstr(2,32, "Start Instances")
+			instances.addstr(19,5, "1 - Make spot requests")
+			instances.addstr(20,5, "2 - Start instances on-demand")
+			instances.addstr(21,5, "3 - Cancel all spot requests")
+			instances.addstr(22,5, "4 - Stop all running instances")
+			instances.addstr(19,46, "5 - Refresh running instances")
+			instances.addstr(20,46, "6 - Refresh spot requests")
+			instances.addstr(21,46, "7 - Prune instance count")
+			instances.addstr(22,46, "8 - Home")
+			
+			
+			instances.border(0)
+			
+			curses.textpad.rectangle(instances, 13, 10, 18, 70)
+			ystart = 5
+			xstart = 2
+
+			yend = 11
+			xend = 77
+			if instancesinput == 42:
+				curses.textpad.rectangle(instances, ystart-1, xstart-1, yend+1, xend+1)	
+				instances.addstr(ystart-1,xstart, "Running instances status report:")
+			instances.refresh()
+
+			runstatus.refresh(runstatus_posUD, runstatus_posLR, ystart, xstart, yend, xend)
+			
+			#while instancesinput == curses.KEY_DOWN or instancesinput ==curses.KEY_UP		
+			if instancesinput == curses.KEY_DOWN:
+					if runstatus_posUD < 100:
+						runstatus_posUD += 1
+						runstatus.refresh(runstatus_posUD, runstatus_posLR, ystart, xstart, yend, xend)
+			elif instancesinput == curses.KEY_UP:
+					if runstatus_posUD > 0:
+						runstatus_posUD -= 1
+						runstatus.refresh(runstatus_posUD, runstatus_posLR, ystart, xstart, yend, xend)
+			elif instancesinput == curses.KEY_RIGHT:
+					if runstatus_posLR > 0:
+						runstatus_posLR -= 1
+						runstatus.refresh(runstatus_posUD, runstatus_posLR, ystart, xstart, yend, xend)
+			elif instancesinput == curses.KEY_LEFT:
+					if runstatus_posLR < 100:
+						runstatus_posLR += 1
+						runstatus.refresh(runstatus_posUD, runstatus_posLR, ystart, xstart, yend, xend)
+
+			if instancesinput == ord('5'):
+				curses.textpad.rectangle(instances, ystart-1, xstart-1, yend+1, xend+1)	
+				instances.addstr(ystart-1,xstart, "Running instances status report:")
+				instances.refresh()
+				runstatus.clear()
+				runstatus.addstr(0, 0, subprocess.check_output("brenda-run status | sed 's/\.000Z//g;s/T/ /g;s/<Status: //g;s/>//g;s/@/│/g;s/`/T/g;/Spot Requests.*/Q'", shell=True).encode('utf-8'))
+				runstatus.refresh(runstatus_posUD, runstatus_posLR, ystart, xstart, yend, xend)
+
+
+			if instancesinput == ord('6'):
+				curses.textpad.rectangle(instances, ystart-1, xstart-1, yend+1, xend+1)	
+				instances.addstr(ystart-1,xstart, "Spot requests status report:")
+				instances.refresh()
+				runstatus.clear()
+				runstatus.addstr(0, 0, subprocess.check_output("brenda-run status | sed 's/\.000Z//g;s/T/ /g;s/<Status: //g;s/>//g;s/@/│/g;s/`/T/g;1,/Spot Requests/d'", shell=True).encode('utf-8'))
+				runstatus.refresh(runstatus_posUD, runstatus_posLR, ystart, xstart, yend, xend)
+			
+			if instancesinput == ord('1'):
+				drawtextbox(14, 11, "Instance type:", 15)
+				
+				
+
+			instancesinput = instances.getch()"""
+
+		
+		
+	
+#initialize curses and all settings
+if __name__=='__main__':
+	
+	stdscr = curses.initscr()
+	
+	
+	while True:
+		try: 
+			
+	
+			stdscr.keypad(1)
+			curses.noecho()
+			curses.cbreak()
+			curses.curs_set(0)
+			
+			main(stdscr)
+	
+			#Set everything back to normal
+			stdscr.keypad(0)
+			curses.echo()
+			curses.nocbreak()
+			curses.endwin()                                                
+			break
+		except:
+			#In the event of an error, try to restore terminal to sane state and quit w/ error message displayed.
+			
+			stdscr.keypad(0)
+			curses.echo()
+			curses.nocbreak()
+			curses.endwin()
+			traceback.print_exc()
+
