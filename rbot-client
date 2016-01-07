@@ -397,19 +397,23 @@ def main(stdscr):
 						#Tell user all frames have been pushed
 						queue.addstr(11, 31, '%d subframes added to work queue     ' % totalsubframes)
 						queue.refresh()
-						
+					#If user does not confirm, stop, tell user, and reloop
 					if frameanswer != ord ('1'):
 						queue.addstr(11, 31, '                                           ')
 						queue.addstr(11, 31, 'Add subframes operation cancelled.    ')
 						queue.refresh()
 						continue
+				#If user wants to refresh task number, just reloop
 				elif queueinput == ord('3'):
 					continue
+				#If user wants to delete tasks, start that procedure
 				elif queueinput == ord('4'):
 					queue.addstr(11, 31, '                                           ')
+					#Ask for confirmation
 					queue.addstr(11, 31, 'Delete all tasks? (1 - yes, 2 - no)')
 					queue.refresh()
 					frameanswer = queue.getch()
+					#If confirmed, delete tasks and inform. Otherwise, put up a cancellation message and reloop
 					if frameanswer == ord('1'):
 						queue.addstr(11, 31, 'Please wait while tasks are deleted...    ')
 						queue.refresh()
@@ -422,31 +426,33 @@ def main(stdscr):
 						queue.addstr(11, 31, 'Delete operation cancelled.    ')
 						queue.refresh()
 						continue
-			
+		#back to homescreen once exited from task management loop	
 		homescreen.refresh()
 
-		
+		#If user wants to launch instances, go to that screen
 		if homeinput == ord('4'):
 			instancesinput = 0
 			instances = curses.newwin(24,80,0,0)
 			instances.keypad(1)
+			#Put up all the text
 			instances.addstr(2,32, "Start Instances")
 			instances.addstr(14,5, "1 - Create spot requests")
 			instances.addstr(16,5, "2 - Launch on-demand instances")
 			instances.addstr(18,5, "3 - Cancel all spot requests")
 			instances.addstr(20,5, "4 - Stop all running instances")
 			instances.addstr(14,45, "5 - Prune running instances")
-                        #instances.addstr(14,45, "5 - Push new render settings")
 			instances.addstr(16,45, "6 - View running instances")
 			instances.addstr(18,45, "7 - View current spot requests")
 			instances.addstr(20,45, "8 - Home")
+			#Put up borders
 			curses.textpad.rectangle(instances, 4, 10, 12, 70)
 			instances.border(0)
 			instances.refresh()
+			#Define text box drawing function
 			def drawtextbox(boxY1, boxX1, label, approxlength):
 				instances.addstr(boxY1, boxX1+1, label)
 				labellength = len(label)
-				#curses.textpad.rectangle(setup, boxY1, boxX1, boxY1+2, boxX1+3+labellength+approxlength)				
+			#Function for getting user input
 			def gettext(boxY1, boxX1, label, approxlength):
 				labellength = len(label)
 				typingbox = instances.subwin(1,approxlength+1, boxY1, boxX1+labellength+2)
@@ -455,88 +461,99 @@ def main(stdscr):
 				returnvalue = str(textpad.Textbox(typingbox).gather())
 				curses.curs_set(0)
 				return returnvalue
+			#Function to clear line
 			def clearline(line):
 				instances.addstr(line,11, "                                                           ")
 			messages = instances.subwin(4,30,8,40)
 			   
-
+			#While user has not indicated they want to exit
 			while instancesinput != ord('8'):
 				
-				
+				#If user wants to launch spot instances
 				if instancesinput == ord('1'):
 					
 					instancesinput = 0
+					#Clear some lines
 					clearline(6)
 					clearline(8)
 					clearline(10)
+					#Add in text for spot request screen
 					drawtextbox(6,12,"Instance type:", 15)
 					drawtextbox(8,12,"Number of instances:", 6)
 					drawtextbox(10,12,"Highest price ($):", 6)
 					drawtextbox(6,45,"Persistent? (y/n):", 1)
 					
 					instances.refresh()
-
+					#Get all the variables from user
 					instancetype = gettext(6,12,"Instance type:", 15)
-					
 					count = gettext(8,12,"Number of instances:", 6).replace("$", "")
 					price = gettext(10,12,"Highest price ($):", 6)
+					#Convert the user's Y to the correct option for brenda-run to make requests persistent
 					persistent = gettext(6,45,"Persistent? (y/n):", 1).replace("Y", "-P").replace("y","-P")
 					if persistent != "-P ":
 						persistent = ""
+					#Try to calculate overall price for all instance requests
 					try:
 
 						overallprice = float(price) * int(count)
 						
+					#if that throws an error tell user
 					except:
-						#break
 						
 						messages.clear()
 						messages.addstr(2,0, 'Invalid parameters! Try again.')		
 						instances.refresh()
 						continue
-					
+					#Ask user for confirmation
 					messages.clear()
 					messages.addstr(0, 0, '   Request at $%s per hour?' % overallprice)
 					messages.addstr(2,0, '       (1 - yes, 2 - no) ')
 					instances.refresh()
 					
 					frameanswer = instances.getch()
+					#Get confirmation answer
 					if frameanswer == ord('1'):
+						#Get the AMI from renderbot website (has current "official" Renderbot AMI, but this line could be changed to reflect any AMI user wants)
 						amivariable = urlopen("http://renderbot.net/ami.html").read()
 						messages.clear()
+						#Tell user and make requests, give confirmation after
 						messages.addstr(2,0, '      Making requests...')
 						messages.refresh()
 						subprocess.check_output("brenda-run %s -i %s -N %s -p %s -a %s spot" % (persistent, instancetype, count, price, amivariable), shell=True)
 						messages.clear()
 						messages.addstr(2,0,'      %s request(s) made.' % count)
 						messages.refresh()
+					#Otherwise, just reloop
 					else:
 						messages.clear()
 						messages.addstr(2,0, '      Requests cancelled.')
 						messages.refresh()
 						continue
+				#If user wants to launch demand instances
 				if instancesinput == ord('2'):
 					instancesinput = 0
 					clearline(6)
 					clearline(8)
 					clearline(10)
 					instancesinput = 0
+					#Add text to describe text fields
 					drawtextbox(6,12,"Instance type:", 15)
 					drawtextbox(8,12,"Number of instances:", 6)
 					
 					
 					instances.refresh()
-
+					#Get user's input
 					instancetype = gettext(6,12,"Instance type:", 15)
 					count = gettext(8,12,"Number of instances:", 6).replace("$", "")
 					
-
+					#Ask for confirmation
 					messages.clear()
 					messages.addstr(0, 0, '      Launch %s instances?' % count)
 					messages.addstr(2,0, '       (1 - yes, 2 - no) ')
 					instances.refresh()
 					
 					frameanswer = instances.getch()
+					#If user says yes, launch instances and give confirmation
 					if frameanswer == ord('1'):
 						amivariable = urlopen("http://renderbot.net/ami.html").read()
 						messages.clear()
@@ -546,21 +563,25 @@ def main(stdscr):
 						messages.clear()
 						messages.addstr(2,0,'      %s instance(s) launched.' % count)
 						messages.refresh()
+					#otherwise, inform user that launch has been cancelled
 					else:
 						messages.clear()
 						messages.addstr(2,0, '      Launch cancelled')
 						messages.refresh()
 						continue
+				#If user wants to cancel requests, go to that screen
 				if instancesinput == ord('3'):
+					#Initialize input variable and clear lines
 					instancesinput = 0
 					clearline(6)
 					clearline(8)
 					clearline(10)
-					
+					#Ask for confirmation
 					messages.clear()
 					messages.addstr(0, 0, '    Cancel all spot requests?')
 					messages.addstr(2,0, '       (1 - yes, 2 - no) ')
 					frameanswer = instances.getch()
+					#If yes, cancel and confirm, otherwise inform user and reloop
 					if frameanswer == ord('1'):
 						messages.clear()
 						messages.addstr(2,0, '      Cancelling requests...')
@@ -576,16 +597,19 @@ def main(stdscr):
 						messages.refresh()
 						continue
 						instances.refresh()
+						
+				#if user wants to stop all instances, go to that screen
 				if instancesinput == ord('4'):
 					instancesinput = 0
 					clearline(6)
 					clearline(8)
 					clearline(10)
-					
+					#Ask for confirmation
 					messages.clear()
 					messages.addstr(0, 0, '    Stop all instances?')
 					messages.addstr(2,0, '       (1 - yes, 2 - no) ')
 					frameanswer = instances.getch()
+					#If yes, stop and give confirmation message
 					if frameanswer == ord('1'):
 						messages.clear()
 						messages.addstr(2,0, '      Stopping instances...')
@@ -594,6 +618,7 @@ def main(stdscr):
 						messages.clear()
 						messages.addstr(2,0,'      All instances stopped.')
 						messages.refresh()
+					#Otherwise, tell user and reloop
 					else:
 						
 						messages.clear()
@@ -601,25 +626,28 @@ def main(stdscr):
 						messages.refresh()
 						continue
 						instances.refresh()
-
+				#If user wants to prune running instances, go to that screen
 				if instancesinput == ord('5'):
                                         instancesinput = 0
                                         clearline(6)
                                         clearline(8)
                                         clearline(10)
-
+					#Put in text for user-given parameters
                                         drawtextbox(6,12,"Target instance count:", 4)
                                         drawtextbox(8,12,"Minutes used filter?:", 2)
                                         instances.refresh()
-
+					#Get user input
                                         instancecount = gettext(6,12,"Target instance count:", 4).replace(' ', '')
                                         minutefilter = gettext(8,12,"Minutes used filter?:", 2).replace(' ', '')
+                                	#If user has provided a minute filter, put that in as a parameter
                                         if minutefilter:
                                                 minutefilter = "-t" + " " + str(minutefilter)
                                         messages.clear()
+                                        #ask for confirmation
                                         messages.addstr(0, 0, '    Prune to %s instances?' % instancecount)
                                         messages.addstr(2,0, '       (1 - yes, 2 - no) ')
                                         frameanswer = instances.getch()
+                                	#If yes, prune and confirm
                                         if frameanswer == ord('1'):
                                                 messages.clear()
                                                 messages.addstr(2,0, '    Pruning to %s instances...' % instancecount)
@@ -628,6 +656,7 @@ def main(stdscr):
                                                 messages.clear()
                                                 messages.addstr(2,0,'      Instances pruned.')
                                                 messages.refresh()
+                                        #If no, do nothing and reloop
                                         else:
 
                                                 messages.clear()
@@ -636,8 +665,9 @@ def main(stdscr):
                                                 continue
                                                 instances.refresh()
 
-
+				#If user wants status report, go to that screen
 				if instancesinput == ord('6'):
+					#Borders and text and keypad
 					instancestatusinput = 0
 					instancestatus = curses.newwin(24,80,0,0)
 					instancestatus.keypad(1)
@@ -647,23 +677,28 @@ def main(stdscr):
 					instancestatus.addstr(20, 32, "1 - Refresh")
 					instancestatus.addstr(22, 32, "2 - Back")
 					instancestatus.refresh()
+					#Set variable for up/down position and left/right position
 					runstatus_posUD = 0
 					runstatus_posLR = 0
+					#Create text area for report
 					runstatus = curses.newpad(100,100)
+					#Put in report from brenda-run that has been piped through a sed function to format it better
 					runstatus.addstr(0, 0, subprocess.check_output("brenda-run status | sed 's/\.000Z//g;s/T/ /g;s/<Status: //g;s/>//g;s/@/│/g;s/`/T/g;/Spot Requests.*/Q'", shell=True).encode('utf-8'))
 					toplabel = curses.newpad(2,100)
+					#Put in labels at top for each column
 					toplabel.addstr(0,0, "instance type  │uptime          │launch date/time (GMT)\n───────────────────────────────────────────────────────────────────────────────────────────────")
+	
 					while instancestatusinput != ord('2'):
-
-						
+					#This whole loop takes care of scrolling around the report
+						#Set variables for endpoints of screen
 						ystart = 6
 						xstart = 2
-
 						yend = 16
 						xend = 77
 						runstatus.refresh(runstatus_posUD, runstatus_posLR, ystart, xstart, yend, xend)
 						toplabel.refresh(0, runstatus_posLR, ystart-2,xstart, ystart-1, xend)
 						instancestatus.refresh()
+						#Take care of all arrow-key motion
 						if instancestatusinput == curses.KEY_DOWN:
 							if runstatus_posUD < 100:
 								runstatus_posUD += 1
@@ -682,15 +717,18 @@ def main(stdscr):
 								runstatus_posLR += 1
 								runstatus.refresh(runstatus_posUD, runstatus_posLR, ystart, xstart, yend, xend)
 								toplabel.refresh(0, runstatus_posLR, ystart-2,xstart, ystart-1, xend)			
+						#If user wants to refresh, reload report
 						if instancestatusinput == ord('1'):
 				
 							runstatus.clear()
 							runstatus.addstr(0, 0, subprocess.check_output("brenda-run status | sed 's/\.000Z//g;s/T/ /g;s/<Status: //g;s/>//g;s/@/│/g;s/`/T/g;/Spot Requests.*/Q'", shell=True).encode('utf-8'))
 							runstatus.refresh(runstatus_posUD, runstatus_posLR, ystart, xstart, yend, xend)
+						#Get input from user
 						instancestatusinput = instancestatus.getch()
+					#Refresh window
 					instances.touchwin()
 					instances.refresh()
-
+				#If user wants a spot request status report, follow a similar procedure
 				if instancesinput == ord('7'):
 					instancestatusinput = 0
 					instancestatus = curses.newwin(24,80,0,0)
@@ -704,12 +742,13 @@ def main(stdscr):
 					runstatus_posUD = 0
 					runstatus_posLR = 0
 					runstatus = curses.newpad(100,100)
+					#Get info with formatting with sed
 					runstatus.addstr(0, 0, subprocess.check_output("brenda-run status | sed 's/\.000Z//g;s/T/ /g;s/<Status: //g;s/>//g;s/@/│/g;s/`/T/g' | sed -n '/^Spot Requests$/,$p' | tail -n +2", shell=True).encode('utf-8'))
 					toplabel = curses.newpad(2,100)
 					toplabel.addstr(0,0, "status   │price  │type      │date/time (GMT)    │status code\n───────────────────────────────────────────────────────────────────────────────────────────")
 					while instancestatusinput != ord('2'):
 
-						
+					#Accept arrow-key input to move report around	
 						ystart = 6
 						xstart = 2
 
@@ -744,20 +783,21 @@ def main(stdscr):
 						instancestatusinput = instancestatus.getch()
 					instances.touchwin()
 					instances.refresh()
-
+				#Get instances input
 				instancesinput = instances.getch()
 
 
-
+		#Back to homescreen
 		homescreen.refresh()
 
+#Start of actual script
 
 #initialize curses and all settings
 if __name__=='__main__':
-	
+	#initalize curses
 	stdscr = curses.initscr()
 	
-	
+	#Infinite loop of main function
 	while True:
 		try: 
 			
@@ -769,14 +809,15 @@ if __name__=='__main__':
 			
 			main(stdscr)
 	
-			#Set everything back to normal
+			#When done, set everything back to normal
 			stdscr.keypad(0)
 			curses.echo()
 			curses.nocbreak()
 			curses.endwin()                                                
+			#And break out of loop
 			break
 		except:
-			#In the event of an error, try to restore terminal to sane state and quit w/ error message displayed.
+			#In the event of an error, try to restore terminal to sane state and display error message.
 			
 			stdscr.keypad(0)
 			curses.echo()
