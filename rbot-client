@@ -34,7 +34,7 @@ def main(stdscr):
 	homescreen.addstr(4,9, "|  _  /|  __| | . ` | |  | |  __| |  _  /|  _ <| |  | | | |   ")
 	homescreen.addstr(5,9, "| | \ \| |____| |\  | |__| | |____| | \ \| |_) | |__| | | |   ")
 	homescreen.addstr(6,9, "|_|  \_\______|_| \_|_____/|______|_|  \_\____/ \____/  |_|   ")
-
+	#display five homescreen options
 	homescreen.addstr(10,32, "1 - Setup")
 	homescreen.addstr(12,32, "2 - Check Prices")
 	homescreen.addstr(14,32, "3 - Manage Queue")
@@ -43,31 +43,39 @@ def main(stdscr):
 
 	#display the homescreen
 	homescreen.refresh()
-
+	#initialize variable for homescreen input
 	homeinput = 0
 	
-#Initial	
+	#Homescreen input loop.
+	#While the user has not pressed exit
 	while homeinput != ord('5'):
 		homescreen.refresh()
+		#get homescreen input with curses get character function
 		homeinput = homescreen.getch()
 
-
+		#If user presses 1 for setup options
 		if homeinput == ord('1'):
-			setup = curses.newwin(24,80,0,0)		
+			#Create new window
+			setup = curses.newwin(24,80,0,0)
+			#initialize setup input variable
 			setupinput = 0
+			#while user has not pressed exit
 			while setupinput != ord('3'):
-
+				#function used to draw textboxes, includes XY coordinates, a label to be displayed, the line number of the entry in the Brenda configuration file, and an approximate length for formatting considerations
 				def drawtextbox(boxY1, boxX1, label, linenumber, approxlength):
 					setup.addstr(boxY1, boxX1+1, label)
 					labellength = len(label)
+					#function includes getting the current values from the brenda configuration file
 					setup.addstr(boxY1, boxX1+2+labellength, subprocess.check_output("sed -n %dp ~/.brenda.conf | cut -f2- -d'='" % linenumber, shell=True))
 					setup.refresh
+				#function used to draw censored textboxes for confidential information (AWS keys)
                                 def redactedtextbox(boxY1, boxX1, label, linenumber, approxlength):
                                         setup.addstr(boxY1, boxX1+1, label)
                                         labellength = len(label)
                                         setup.addstr(boxY1, boxX1+2+labellength, "*" * len(subprocess.check_output("sed -n %dp ~/.brenda.conf | cut -f2- -d'='" % linenumber, shell=True)))
                                         #curses.textpad.rectangle(setup, boxY1, boxX1, boxY1+2, boxX1+3+labellength+approxlength)
                                         setup.refresh
+                                #function used to get user input for each option
 				def gettext(boxY1, boxX1, label, linenumber, approxlength):
 					labellength = len(label)
 					typingbox = setup.subwin(1,approxlength+1, boxY1, boxX1+labellength+2)
@@ -76,6 +84,7 @@ def main(stdscr):
 					returnvalue = str(textpad.Textbox(typingbox).gather())
 					curses.curs_set(0)
 					subprocess.check_output("sed -i \'%ds@\=.*@\=%s@\' ~/.brenda.conf" % (linenumber, returnvalue), shell=True)
+				#function used to get current AWS region in configuration file
 				def getregion(boxY1, boxX1, label, linenumber, approxlength):
 					labellength = len(label)
 					typingbox = setup.subwin(1,approxlength+1, boxY1, boxX1+labellength+2)
@@ -83,33 +92,44 @@ def main(stdscr):
 					returnvalue = str(textpad.Textbox(typingbox).gather())
 					curses.curs_set(0)
 					subprocess.check_output("sed -i \'%ds@\=.*@\=%s@\' ~/.brenda.conf" % (linenumber, returnvalue), shell=True)
+				#function used to clear a line
 				def clearline(line):
                                 	setup.addstr(line,3, "                                                                           ")
 	
-				
+				#Enables use of keypad
 				setup.keypad(1)
+				#Writes out text on setup screen
 				setup.addstr(1,37, "Setup")
 				setup.addstr(20,32, "1 - Edit")
 				setup.addstr(21,32, "2 - Push settings")
 				setup.addstr(22,32, "3 - Home")
+				#Creates textboxes for AWS keys
 				redactedtextbox(4,5,"AWS Access Key:",8,20)
 				redactedtextbox(6,5,"AWS Secret Key:",9,40)
+				#Draws text boxes, uses line numbers from config file to also get the info currently in the configuration file
 				drawtextbox(8,5,"Blender Project:", 2, 50)
 				drawtextbox(10,5,"Output location:", 4, 50)
 				drawtextbox(12,5,"SQS work queue:", 3, 50)
 				drawtextbox(14,5,"Default instance type:", 1, 15)
 				drawtextbox(16,5,"When finished:", 6, 8)
 				drawtextbox(18,5,"AWS region:", 10, 16)
+				#Draws borders
 				textpad.rectangle(setup,3,4,19,75)
 				setup.border(0)
+				#refresh screen
 				setup.refresh()
+				#get the setup input variable using curses getch function
 				setupinput = setup.getch()
+				#If user wants to edit and presses 1
 				if setupinput == ord('1'):
+					#Make the secret keys that were redacted (********) now appear in plaintext by using normal drawing function
 	                                drawtextbox(4,5,"AWS Access Key:",8,20)
 	                                drawtextbox(6,5,"AWS Secret Key:",9,40)
+	                                #redraw borders
         	                        textpad.rectangle(setup,3,4,19,75)
                 	                setup.border(0)
                         	        setup.refresh()
+                        	        #get user input successively for all options (this also edits the configuration file through use of gettext function above)
                                 	gettext(4,5,"AWS Access Key:",8,20)
 	                                gettext(6,5,"AWS Secret Key:",9,40)
         	                        gettext(8,5,"Blender Project:", 2, 50)
@@ -118,30 +138,43 @@ def main(stdscr):
                                 	gettext(14,5,"Default instance type:", 1, 15)
 	                                gettext(16,5,"When finished:", 6, 8)
         	                        gettext(18,5,"AWS region:", 10, 16)
+        	                        #Also get region info and input it (needs to be inputted several times because region is used multiple times in the config file, but shouldn't need to be inputted multiple times by the user
                 	                getregion(18,5,"AWS region:", 11, 16)
                         	        getregion(18,5,"AWS region:", 12, 16)
+                        	        #Run brenda initialization function
                                 	subprocess.check_output("brenda-run init", shell=True)
 
 
 
 				elif setupinput == ord('2'):
+				#If user wants to push settings to running instances
+					#Clear line used for message display
 					clearline(21)
+					#Ask for confirmation
 					setup.addstr(21,15, "Stop all current processes and push new settings? (1-yes, 2-no)")
 					setup.refresh()
+					#Get user input
 					pushinput = setup.getch()
+					#If user wants to push settings
 					if pushinput == ord('1'):
 						clearline(21)
+						#Tell user settings are being pushed
 						setup.addstr(21,15, "Pushing new settings to instances...")
 						setup.refresh()
+						#Try to push settings
 						try:
+							#First, tell any running nodes to kill their current brenda-node processes and remove any previous newrendersettings file that user might have pushed before
                                                		try:
                                                        		subprocess.check_output("brenda-tool ssh sudo killall brenda-node", shell=True)
                                                        		subprocess.check_output("sudo rm -rf ~/newrendersettings", shell=True)
+                                               		#But user may not have pushed settings in the past or brenda-node may not be working at that time, so pass exceptions
                                                		except:   
                                                        		pass
+                                                       	#Send brenda script to a local file on client machine
                                                		subprocess.check_output("sudo brenda-run script > ~/newrendersettings", shell=True)
+                                               		#Format that script properly using sed
                                                		subprocess.check_output("sed -i '1i sudo -i' ~/newrendersettings", shell=True)
-                                               
+                                               		#Use brenda-tool ssh to send that script to nodes
                                                		subprocess.check_output("brenda-tool ssh 'bash -s' < ~/newrendersettings", shell=True)
                                                		clearline(21)
                                                		setup.addstr(21,15,'Settings pushed.')
