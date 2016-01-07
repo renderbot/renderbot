@@ -190,11 +190,15 @@ def main(stdscr):
                                                		#Use brenda-tool ssh to send that script to nodes
                                                		subprocess.check_output("brenda-tool ssh 'bash -s' < ~/newrendersettings", shell=True)
                                                		clearline(21)
+                                               		#inform user that settings have been pushed
                                                		setup.addstr(21,15,'Settings pushed.')
                                                		setup.refresh()
+                                               		#slight delay so user can read message
 							sleep(0.5)
 							clearline(21)
+							#and continue loop
 							continue
+						#Otherwise, inform user that push failed
 						except:
 							clearline(21)
 							setup.addstr(21,15,'Push failed.')
@@ -202,7 +206,7 @@ def main(stdscr):
 							sleep(0.5)
 							clearline(21)
 							continue
-					
+					#If user does not confirm push, cancel push and inform user
                                         else:
                                                	clearline(21)
                                                	setup.addstr(21,15, 'Settings push cancelled.')
@@ -211,75 +215,92 @@ def main(stdscr):
 						clearline(21)
 						continue
 
-								
+				#If user wants to exit this screen, break loop				
 				elif setupinput == ord('3'):
 					break
 
 								
-						
+			#go back to homescreen			
 			homescreen.refresh()
 
 
+		#If user wants to check prices, go into prices loop
 		if homeinput == ord('2'):
+			#Make window and initialize input variable
 			prices = curses.newwin(24,80,0,0)		
 			pricesinput = 0
+			#While user has not indicated they want to exit
 			while pricesinput != ord('3'):
-				
+				#Draw border and put in text on screen
 				prices.border(0)
 				prices.addstr(2,32, "Check Prices")
 				prices.addstr(14,32, "1 - Input instance type")
 				prices.addstr(16,32, "2 - Refresh")
 				prices.addstr(18,32, "3 - Home")
+				#Including subwindow for input
 				inputbox = prices.subwin(3,30,4,2)
 				inputbox.border(0)
 				prices.addstr(5,3, "Instance Type:")
+				#Typing box for user to indicate the instance type to check
 				typingbox = prices.subwin(1,13,5,18)
-				
+				#Output box for prices
 				outputbox = prices.subwin(8,45,4,33)
 				outputbox.border(0)
 				prices.refresh()
 				
-				
+				#Clear text box area
 				for y in range(5, 11):
 		   				prices.addstr(y, 34, "                                           ")
-				
+				#Get instance input
 				instance = str(textpad.Textbox(typingbox).gather())
+				#Run brenda price-check command
 				output = subprocess.check_output(["brenda-run", "-i", instance, "price"])
+				#Split up output and put it on screen in output box
 				for y, line in enumerate(output.splitlines(), 5):
 		   				prices.addstr(y, 34, line)
+   				#Draw border and refresh
 				prices.border(0)
 				prices.refresh()
+				#Get input on this screen
 				pricesinput = prices.getch()
 				if pricesinput == ord('1'):
-				
+					#If user wants to input instance type, edit that text box
 					curses.curs_set(1)
 					textpad.Textbox(typingbox).edit()
 					
 					curses.curs_set(0)
 					continue
+				#If user wants to refresh, just run the loop
 				if pricesinput == ord('2'):
 					continue
+			#And back to homescreen
 			homescreen.refresh()
-
+		#If user wants to add tasks, go to new screen
 		if homeinput == ord('3'):
+			#Set up border and input variable
 			queue = curses.newwin(24,80,0,0)		
 			queueinput = 0
+			#While user has not pressed exit
 			while queueinput != ord('5'):
+				#Define draw text box function
 				def drawtextbox(boxY1, boxX1, label, approxlength):
 					queue.addstr(boxY1, boxX1+1, label)
 					labellength = len(label)
-					#curses.textpad.rectangle(setup, boxY1, boxX1, boxY1+2, boxX1+3+labellength+approxlength)				
+				#Define get text function
 				def gettext(boxY1, boxX1, label, approxlength):
 					labellength = len(label)
+					#Defines typing box
 					typingbox = queue.subwin(1,approxlength+1, boxY1, boxX1+labellength+2)
 					curses.curs_set(1)
+					#Allows user to edit that box
 					textpad.Textbox(typingbox).edit()
+					#Returns what user typed
 					returnvalue = str(textpad.Textbox(typingbox).gather())
 					curses.curs_set(0)
 					return returnvalue
 					
 
-				
+				#Add in all the text on screen and borders
 				queue.addstr(2,32, "Manage Queue")
 				
 				queue.addstr(14,32, "1 - Add frame tasks")
@@ -291,66 +312,92 @@ def main(stdscr):
 				curses.textpad.rectangle(queue, 5, 3, 7, 25)
 				curses.textpad.rectangle(queue, 5, 30, 12, 75)
 				queue.refresh()
+				#Add current task count from brenda-work script
 				queue.addstr(6, 4, subprocess.check_output("brenda-work status", shell=True))
 				queue.border(0)
+				#More borders
 				curses.textpad.rectangle(queue, 5, 3, 7, 25)
 				curses.textpad.rectangle(queue, 5, 30, 12, 75)
+				#Refresh and get an input for the queue screen from user
 				queue.refresh()
 				queueinput = queue.getch()
+				#If user wants to add frame tasks
 				if queueinput == ord('1'):
+					#Clear out some lines
 					queue.addstr(11, 31, '                                  ')
 					queue.addstr(9, 31, '                                  ')
 					queue.addstr(7, 31, '                                  ')
+					#Add start and end text
 					drawtextbox(7, 30, "Start:", 15)
 					drawtextbox(9, 30, "End:", 15)
 					queue.refresh()
+					#Get variables from user for start and end frames
 					start = int(gettext(7, 30, "Start:", 15))
 					end = int(gettext(9, 30, "End:", 15))
 					total = int(end)-int(start)+1
+					#If start is > than end tell user and reloop
 					if total <= 0:
 						queue.addstr(11, 31, 'Invalid # of frames.')
 						continue
+					#Ask for confirmation
 					queue.addstr(11, 31, 'Add %d frames? (1 - yes, 2 - no)' % total)
 					frameanswer = queue.getch()
+					#If user confirms
 					if frameanswer == ord('1'):
+						#Tell user frames are being added
 						queue.addstr(11, 31, 'Please wait as frames are added... ')
 						queue.refresh()
+						#Push frames
 						subprocess.check_output("brenda-work -T ~/frame-template -s %d -e %d push" % (start, end), shell=True)
 						queue.addstr(11, 31, '                                           ')
+						#Tell user frames were added
 						queue.addstr(11, 31, '%d frames added to work queue.     ' % total)
 						queue.refresh()
+					#Otherwise cancel, inform user, and reloop
 					if frameanswer != ord ('1'):
 						queue.addstr(11, 31, 'Add frames operation cancelled.    ')
 						queue.refresh()
 						continue
-					
+				#If user wants to add subframes	
 				elif queueinput == ord('2'):
 					queue.addstr(11, 31, '                                           ')
+					#Put in text
 					drawtextbox(7, 30, "Start:", 10)
 					drawtextbox(9, 30, "End:", 10)
 					drawtextbox(7, 50, "Horiz. tiles:", 10)
 					drawtextbox(9, 50, "Vert. tiles:", 10)
 					queue.refresh()
+					#Get all the variables from user, including vertical and horizontal subdivisions
 					start = int(gettext(7, 30, "Start:", 10))
 					end = int(gettext(9, 30, "End:", 10))
 					vsub = int(gettext(7, 50, "Horiz. tiles:", 9))
 					hsub = int(gettext(9, 50, "Vert. tiles:", 10))
+					#Figure out total number of frames
 					total = end - start + 1
+					#Figure out total number of subframes
 					totalsubframes = (end*hsub*vsub)-(start*hsub*vsub)+(1*hsub*vsub)
+					#If total is invalid, tell user and reloop
 					if total <= 0:
 						queue.addstr(11, 31, 'Invalid # of frames.')
 						continue
+					#Clear message space
 					queue.addstr(11, 31, '                                           ')
+					#Ask user whether to add subframes requested
 					queue.addstr(11, 31, 'Add %d subframes? (1 - yes, 2 - no)' % totalsubframes)
 					frameanswer = queue.getch()
+					#If confirmed
 					if frameanswer == ord('1'):
 						queue.addstr(11, 31, '                                           ')
+						#Clear messages and inform user that push is occurring
 						queue.addstr(11, 31, 'Please wait as subframes are added... ')
 						queue.refresh()
+						#Push frames with brenda-work script
 						subprocess.check_output("brenda-work -T ~/subframe-template -s %d -e %d -X %d -Y %d push" % (start, end,hsub,vsub), shell=True)
 						queue.addstr(11, 31, '                                           ')
+						#Tell user all frames have been pushed
 						queue.addstr(11, 31, '%d subframes added to work queue     ' % totalsubframes)
 						queue.refresh()
+						
 					if frameanswer != ord ('1'):
 						queue.addstr(11, 31, '                                           ')
 						queue.addstr(11, 31, 'Add subframes operation cancelled.    ')
