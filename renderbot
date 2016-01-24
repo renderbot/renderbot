@@ -514,7 +514,7 @@ def main(stdscr):
 					#Get confirmation answer
 					if frameanswer == ord('1'):
 						#Get the AMI from renderbot website (has current "official" Renderbot AMI, but this line could be changed to reflect any AMI user wants)
-						amivariable = open('~/renderbot/ami').read()
+						amivariable = open('/home/ubuntu/renderbot/ami').read()
 						messages.clear()
 						#Tell user and make requests, give confirmation after
 						messages.addstr(2,0, '      Making requests...')
@@ -555,7 +555,7 @@ def main(stdscr):
 					frameanswer = instances.getch()
 					#If user says yes, launch instances and give confirmation
 					if frameanswer == ord('1'):
-						amivariable = open('~/renderbot/ami').read()
+						amivariable = open('/home/ubuntu/renderbot/ami').read()
 						messages.clear()
 						messages.addstr(2,0, '      Launching instances...')
 						messages.refresh()
